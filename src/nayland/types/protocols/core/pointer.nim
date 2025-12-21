@@ -1,0 +1,103 @@
+## Wrapper around `wl_pointer`
+##
+## Copyright (C) 2025 Trayambak Rai (xtrayambak@disroot.org)
+import
+  pkg/nayland/bindings/libwayland,
+  pkg/nayland/bindings/protocols/core,
+  pkg/nayland/types/protocols/core/surface
+
+type
+  PointerObj = object
+    handle: ptr wl_pointer
+
+    listener: wl_pointer_listener
+    callbacks: PointerCallbackPRef
+
+  PointerCallbackPayload = object
+    obj: Pointer
+
+    enterCb: PointerEnterCallback
+    leaveCb: PointerLeaveCallback
+    motionCb: PointerMotionCallback
+    frameCb: PointerFrameCallback
+    axisCb: PointerAxisCallback
+    axisSourceCb: PointerAxisSourceCallback
+
+  PointerCallbackPRef = ref PointerCallbackPayload
+
+  PointerEnterCallback* =
+    proc(pntr: Pointer, serial: uint32, surface: Surface, surfaceX, surfaceY: float)
+
+  PointerFrameCallback* = proc(pntr: Pointer)
+  PointerAxisCallback* = proc(pntr: Pointer, time, axis: uint32, value: float)
+
+  PointerLeaveCallback* = proc(pntr: Pointer, serial: uint32, surface: Surface)
+
+  PointerMotionCallback* = proc(pntr: Pointer, time: uint32, surfaceX, surfaceY: float)
+  PointerAxisSourceCallback* = proc(pntr: Pointer, axisSource: uint32)
+  PointerAxisStopCallback* = proc(pntr: Pointer, time, axis: uint32)
+  PointerAxisDiscreteCallback* = proc(pntr: Pointer, axis, discrete: int32)
+  PointerAxisValue120Callback* = proc(pntr: Pointer, axis, value120: int32)
+  PointerAxisRelativeDirection* = proc(pntr: Pointer, axis, direction: uint32)
+
+  Pointer* = ref PointerObj
+
+proc release*(pntr: Pointer | PointerObj) =
+  wl_pointer_release(pntr.handle)
+
+proc `onEnter=`*(pntr: Pointer, callback: PointerEnterCallback) =
+  pntr.callbacks.enterCb = callback
+  pntr.listener.enter = proc(
+      data: pointer,
+      _: ptr wl_pointer,
+      serial: uint32,
+      surf: ptr wl_surface,
+      surfaceX, surfaceY: wl_fixed,
+  ) {.cdecl.} =
+    let payload = cast[ptr PointerCallbackPayload](data)
+    payload.enterCb(
+      payload.obj, serial, newSurface(surf), surfaceX.toFloat(), surfaceY.toFloat()
+    )
+
+proc `onLeave=`*(pntr: Pointer, callback: PointerLeaveCallback) =
+  pntr.callbacks.leaveCb = callback
+  pntr.listener.leave = proc(
+      data: pointer, _: ptr wl_pointer, serial: uint32, surf: ptr wl_surface
+  ) {.cdecl.} =
+    let payload = cast[ptr PointerCallbackPayload](data)
+    payload.leaveCb(payload.obj, serial, newSurface(surf))
+
+proc `onMotion=`*(pntr: Pointer, callback: PointerMotionCallback) =
+  pntr.callbacks.motionCb = callback
+  pntr.listener.motion = proc(
+      data: pointer, _: ptr wl_pointer, time: uint32, surfaceX, surfaceY: wl_fixed
+  ) {.cdecl.} =
+    let payload = cast[ptr PointerCallbackPayload](data)
+    payload.motionCb(payload.obj, time, surfaceX.toFloat(), surfaceY.toFloat())
+
+proc `onFrame=`*(pntr: Pointer, callback: PointerFrameCallback) =
+  pntr.callbacks.frameCb = callback
+  pntr.listener.frame = proc(data: pointer, _: ptr wl_pointer) {.cdecl.} =
+    let payload = cast[ptr PointerCallbackPayload](data)
+    payload.frameCb(payload.obj)
+
+proc `onAxis=`*(pntr: Pointer, callback: PointerAxisCallback) =
+  pntr.callbacks.axisCb = callback
+  pntr.listener.axis = proc(
+      data: pointer, _: ptr wl_pointer, time, axis: uint32, value: wl_fixed
+  ) {.cdecl.} =
+    let payload = cast[ptr PointerCallbackPayload](data)
+    payload.axisCb(payload.obj, time, axis, toFloat(value))
+
+proc `onAxisSource=`*(pntr: Pointer, callback: PointerAxisSourceCallback) =
+  pntr.callbacks.axisSourceCb = callback
+
+proc attachCallbacks*(pntr: Pointer) =
+  pntr.callbacks.obj = pntr
+
+  discard wl_pointer_add_listener(
+    pntr.handle, pntr.listener.addr, cast[ptr PointerCallbackPayload](pntr.callbacks)
+  )
+
+func newPointer*(handle: ptr wl_pointer): Pointer =
+  Pointer(handle: handle, callbacks: PointerCallbackPRef())
