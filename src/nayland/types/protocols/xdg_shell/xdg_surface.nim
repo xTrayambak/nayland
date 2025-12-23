@@ -11,8 +11,6 @@ import
 type
   XDGSurfaceObj = object
     handle*: ptr xdg_surface
-
-    listener: xdg_surface_listener
     callbacks: XDGSurfaceCallbacksRef
 
   XDGSurfaceCallback* = proc(surface: XDGSurface, data: pointer, serial: uint32)
@@ -26,6 +24,12 @@ type
 
   XDGSurfaceCallbacksRef = ref XDGSurfaceCallbacksPayload
 
+let listener = xdg_surface_listener(
+  configure: proc(data: pointer, _: ptr xdg_surface, serial: uint32) {.cdecl.} =
+    let payload = cast[ptr XDGSurfaceCallbacksPayload](data)
+    payload.configure(payload.surf, data, serial)
+)
+
 proc getToplevel*(xdgSurf: XDGSurface): Option[XDGToplevel] =
   let handle = xdg_surface_get_toplevel(xdgSurf.handle)
   if handle == nil:
@@ -37,12 +41,6 @@ proc ackConfigure*(xdgSurf: XDGSurface, serial: uint32) =
   xdg_surface_ack_configure(xdgSurf.handle, serial)
 
 proc `onConfigure=`*(xdgSurf: XDGSurface, callback: XDGSurfaceCallback) =
-  xdgSurf.listener.configure = proc(
-      data: pointer, _: ptr xdg_surface, serial: uint32
-  ) {.cdecl.} =
-    let payload = cast[ptr XDGSurfaceCallbacksPayload](data)
-    payload.configure(payload.surf, data, serial)
-
   xdgSurf.callbacks.configure = callback
 
 proc attachCallbacks*(xdgSurf: XDGSurface) =
@@ -50,7 +48,7 @@ proc attachCallbacks*(xdgSurf: XDGSurface) =
 
   discard xdg_surface_add_listener(
     xdgSurf.handle,
-    xdgSurf.listener.addr,
+    listener.addr,
     cast[ptr XDGSurfaceCallbacksPayload](xdgSurf.callbacks),
   )
 
