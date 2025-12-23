@@ -29,6 +29,7 @@ type
   wl_output* {.importc: "struct $1".} = object
   wl_pointer* {.importc: "struct $1".} = object
   wl_callback* {.importc: "struct $1".} = object
+  wl_keyboard* {.importc: "struct $1".} = object
 
   wl_pointer_listener* {.importc: "struct $1".} = object
     enter*: proc(
@@ -70,6 +71,40 @@ type
     capabilities*:
       proc(data: pointer, seat: ptr wl_seat, capabilities: uint32) {.cdecl.}
     name*: proc(data: pointer, seat: ptr wl_seat, name: cstring) {.cdecl.}
+
+  wl_keyboard_listener* {.importc: "struct $1".} = object
+    keymap*: proc(
+      data: pointer, keyb: ptr wl_keyboard, fmt: uint32, fd: int32, size: uint32
+    ) {.cdecl.}
+    enter*: proc(
+      data: pointer,
+      keyb: ptr wl_keyboard,
+      serial: uint32,
+      surf: ptr wl_surface,
+      keys: ptr wl_array,
+    ) {.cdecl.}
+    leave*: proc(
+      data: pointer, keyb: ptr wl_keyboard, serial: uint32, surf: ptr wl_surface
+    ) {.cdecl.}
+    key*: proc(
+      data: pointer,
+      keyb: ptr wl_keyboard,
+      serial: uint32,
+      time: uint32,
+      key: uint32,
+      state: uint32,
+    ) {.cdecl.}
+    modifiers*: proc(
+      data: pointer,
+      keyb: ptr wl_keyboard,
+      serial: uint32,
+      modsDepressed: uint32,
+      modsLatched: uint32,
+      modsLocked: uint32,
+      group: uint32,
+    ) {.cdecl.}
+    repeatInfo*:
+      proc(data: pointer, keyb: ptr wl_keyboard, rate: int32, delay: int32) {.cdecl.}
 
 {.push importc.}
 
@@ -142,6 +177,10 @@ proc wl_callback_add_listener*(
 ): int32
 
 proc wl_callback_destroy*(cb: ptr wl_callback)
+
+proc wl_keyboard_add_listener*(
+  keyb: ptr wl_keyboard, listener: ptr wl_keyboard_listener, data: pointer
+): int32
 
 # Core Wayland protocol interfaces
 let wl_compositor_interface*: wl_interface

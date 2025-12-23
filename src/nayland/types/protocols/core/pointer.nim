@@ -10,7 +10,6 @@ type
   PointerObj = object
     handle: ptr wl_pointer
 
-    listener: wl_pointer_listener
     callbacks: PointerCallbackPRef
 
   PointerCallbackPayload = object
@@ -42,12 +41,8 @@ type
 
   Pointer* = ref PointerObj
 
-proc release*(pntr: Pointer | PointerObj) =
-  wl_pointer_release(pntr.handle)
-
-proc `onEnter=`*(pntr: Pointer, callback: PointerEnterCallback) =
-  pntr.callbacks.enterCb = callback
-  pntr.listener.enter = proc(
+let listener = wl_pointer_listener(
+  enter: proc(
       data: pointer,
       _: ptr wl_pointer,
       serial: uint32,
@@ -57,37 +52,44 @@ proc `onEnter=`*(pntr: Pointer, callback: PointerEnterCallback) =
     let payload = cast[ptr PointerCallbackPayload](data)
     payload.enterCb(
       payload.obj, serial, newSurface(surf), surfaceX.toFloat(), surfaceY.toFloat()
-    )
-
-proc `onLeave=`*(pntr: Pointer, callback: PointerLeaveCallback) =
-  pntr.callbacks.leaveCb = callback
-  pntr.listener.leave = proc(
+    ),
+  leave: proc(
       data: pointer, _: ptr wl_pointer, serial: uint32, surf: ptr wl_surface
   ) {.cdecl.} =
     let payload = cast[ptr PointerCallbackPayload](data)
-    payload.leaveCb(payload.obj, serial, newSurface(surf))
-
-proc `onMotion=`*(pntr: Pointer, callback: PointerMotionCallback) =
-  pntr.callbacks.motionCb = callback
-  pntr.listener.motion = proc(
+    payload.leaveCb(payload.obj, serial, newSurface(surf)),
+  motion: proc(
       data: pointer, _: ptr wl_pointer, time: uint32, surfaceX, surfaceY: wl_fixed
   ) {.cdecl.} =
     let payload = cast[ptr PointerCallbackPayload](data)
-    payload.motionCb(payload.obj, time, surfaceX.toFloat(), surfaceY.toFloat())
-
-proc `onFrame=`*(pntr: Pointer, callback: PointerFrameCallback) =
-  pntr.callbacks.frameCb = callback
-  pntr.listener.frame = proc(data: pointer, _: ptr wl_pointer) {.cdecl.} =
+    payload.motionCb(payload.obj, time, surfaceX.toFloat(), surfaceY.toFloat()),
+  frame: proc(data: pointer, _: ptr wl_pointer) {.cdecl.} =
     let payload = cast[ptr PointerCallbackPayload](data)
-    payload.frameCb(payload.obj)
-
-proc `onAxis=`*(pntr: Pointer, callback: PointerAxisCallback) =
-  pntr.callbacks.axisCb = callback
-  pntr.listener.axis = proc(
+    payload.frameCb(payload.obj),
+  axis: proc(
       data: pointer, _: ptr wl_pointer, time, axis: uint32, value: wl_fixed
   ) {.cdecl.} =
     let payload = cast[ptr PointerCallbackPayload](data)
-    payload.axisCb(payload.obj, time, axis, toFloat(value))
+    payload.axisCb(payload.obj, time, axis, toFloat(value)),
+)
+
+proc release*(pntr: Pointer | PointerObj) =
+  wl_pointer_release(pntr.handle)
+
+proc `onEnter=`*(pntr: Pointer, callback: PointerEnterCallback) =
+  pntr.callbacks.enterCb = callback
+
+proc `onLeave=`*(pntr: Pointer, callback: PointerLeaveCallback) =
+  pntr.callbacks.leaveCb = callback
+
+proc `onMotion=`*(pntr: Pointer, callback: PointerMotionCallback) =
+  pntr.callbacks.motionCb = callback
+
+proc `onFrame=`*(pntr: Pointer, callback: PointerFrameCallback) =
+  pntr.callbacks.frameCb = callback
+
+proc `onAxis=`*(pntr: Pointer, callback: PointerAxisCallback) =
+  pntr.callbacks.axisCb = callback
 
 proc `onAxisSource=`*(pntr: Pointer, callback: PointerAxisSourceCallback) =
   pntr.callbacks.axisSourceCb = callback
@@ -96,7 +98,7 @@ proc attachCallbacks*(pntr: Pointer) =
   pntr.callbacks.obj = pntr
 
   discard wl_pointer_add_listener(
-    pntr.handle, pntr.listener.addr, cast[ptr PointerCallbackPayload](pntr.callbacks)
+    pntr.handle, listener.addr, cast[ptr PointerCallbackPayload](pntr.callbacks)
   )
 
 func newPointer*(handle: ptr wl_pointer): Pointer =
