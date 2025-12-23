@@ -93,7 +93,7 @@ surf.attach(get buff, 0, 0)
 surf.damage(0, 0, 32, 32)
 surf.commit()
 
-proc onFrameCb(callback: Callback, surf: pointer, data: uint32) =
+proc onFrameCb(callback: Callback, surf: pointer, data: uint32) {.cdecl.} =
   echo "urf urf urf urf urf"
   destroy callback
   let surf = cast[Surface](surf)

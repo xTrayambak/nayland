@@ -8,7 +8,8 @@ type
     handle: ptr wl_callback
     listener: ptr wl_callback_listener
 
-  CallbackCallback* = proc(callback: Callback, obj: pointer, callbackData: uint32)
+  CallbackCallback* =
+    proc(callback: Callback, obj: pointer, callbackData: uint32) {.cdecl.}
     ## The ultimate callback. Fear it.
     ##
     ## I should probably rename this to something less nonsensical.
@@ -43,6 +44,7 @@ proc listen*(callback: Callback, obj: pointer, cb: CallbackCallback) =
   discard wl_callback_add_listener(callback.handle, callback.listener, payload)
 
 proc destroy*(callback: Callback) =
+  echo "doch " & $(callback.handle.isnil)
   wl_callback_destroy(callback.handle)
 
 proc implantListener*(source: Callback, dest: Callback) =
