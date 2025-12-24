@@ -58,7 +58,7 @@ let listener = wl_keyboard_listener(
   ) {.cdecl.} =
     let numKeys = int(keys.size.int / sizeof(uint32))
     let payload = cast[ptr KeyboardCallbacksObj](data)
-    var keysBuff = newSeqOfCap[uint32](numKeys)
+    var keysBuff = newSeq[uint32](numKeys)
 
     if numKeys > 0:
       copyMem(keysBuff[0].addr, cast[ptr uint32](keys), numKeys)
