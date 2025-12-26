@@ -130,7 +130,13 @@ toplevel.onClose = proc(toplevel: XDGToplevel) =
 
 toplevel.attachCallbacks()
 
-surf.attach(get buff, 0, 0)
+let buffr = get buff
+buffr.onRelease = proc(_: Buffer) =
+  echo "Release Buffer"
+
+buffr.attachCallbacks()
+
+surf.attach(buffr, 0, 0)
 surf.damage(0, 0, 32, 32)
 surf.commit()
 

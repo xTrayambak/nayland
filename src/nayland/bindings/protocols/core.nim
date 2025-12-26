@@ -106,6 +106,9 @@ type
     repeat_info*:
       proc(data: pointer, keyb: ptr wl_keyboard, rate: int32, delay: int32) {.cdecl.}
 
+  wl_buffer_listener* {.importc: "struct $1".} = object
+    release*: proc(data: pointer, buffer: ptr wl_buffer) {.cdecl.}
+
 {.push importc.}
 
 let
@@ -159,6 +162,9 @@ proc wl_shm_pool_destroy*(p: ptr wl_shm_pool)
 proc wl_shm_pool_resize*(p: ptr wl_shm_pool, size: int32)
 
 proc wl_buffer_destroy*(b: ptr wl_buffer)
+proc wl_buffer_add_listener*(
+  b: ptr wl_buffer, l: ptr wl_buffer_listener, data: pointer
+): int32
 
 proc wl_pointer_add_listener*(
   p: ptr wl_pointer, listener: ptr wl_pointer_listener, data: pointer

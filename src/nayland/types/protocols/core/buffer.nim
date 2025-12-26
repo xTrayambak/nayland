@@ -11,10 +11,34 @@ type
   BufferObj = object
     handle*: ptr wl_buffer
 
+    payload: BufferCallbackPayload
+
+  BufferReleaseCallback* = proc(buffer: Buffer)
+
+  BufferCallbackPObj = object
+    obj*: Buffer
+    releaseCb*: BufferReleaseCallback
+
+  BufferCallbackPayload* = ref BufferCallbackPObj
+
   Buffer* = ref BufferObj
+
+let listener = wl_buffer_listener(
+  release: proc(data: pointer, buffer: ptr wl_buffer) {.cdecl.} =
+    let payload = cast[ptr BufferCallbackPObj](data)
+    payload.releaseCb(payload.obj)
+)
 
 proc `=destroy`*(buffer: BufferObj) =
   wl_buffer_destroy(buffer.handle)
 
+proc `onRelease=`*(buffer: Buffer, callback: BufferReleaseCallback) =
+  buffer.payload.releaseCb = callback
+
+proc attachCallbacks*(buffer: Buffer) =
+  discard wl_buffer_add_listener(
+    buffer.handle, listener.addr, cast[ptr BufferCallbackPObj](buffer.payload)
+  )
+
 func newBuffer*(handle: ptr wl_buffer): Buffer =
-  Buffer(handle: handle)
+  Buffer(handle: handle, payload: BuffercallbackPayload())
