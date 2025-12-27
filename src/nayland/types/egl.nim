@@ -18,7 +18,7 @@ proc createEGLWindow*(
 proc destroy*(window: EGLWindow) =
   wl_egl_window_destroy(window.handle)
 
-proc resize*(window: EGLWindow, width, height, dx, dy: int32): EGLWindow =
+proc resize*(window: EGLWindow, width, height, dx, dy: int32) =
   wl_egl_window_resize(window.handle, width = width, height = height, dx = dx, dy = dy)
 
 proc getAttachedSize*(window: EGLWindow): tuple[width, height: int32] =
