@@ -5,8 +5,9 @@ import
     buffer, callback, compositor, keyboard, pointer, registry, seat, shm, shm_pool,
     surface,
   ],
-  pkg/nayland/bindings/protocols/[core, xdg_shell],
-  pkg/nayland/types/protocols/xdg_shell/[wm_base, xdg_surface, xdg_toplevel]
+  pkg/nayland/bindings/protocols/[core, xdg_shell, fractional_scale_v1],
+  pkg/nayland/types/protocols/xdg_shell/[wm_base, xdg_surface, xdg_toplevel],
+  pkg/nayland/types/protocols/fractional_scale/prelude
 import pkg/pretty
 
 let disp = connectDisplay()
@@ -32,6 +33,13 @@ let shmi =
 let wmBaseIface = reg["xdg_wm_base"]
 let wm = initWmBase(
   reg.bindInterface(wmBaseIface.name, xdg_wm_base_interface.addr, wmBaseIface.version)
+)
+
+let fracScale = reg["wp_fractional_scale_manager_v1"]
+let fracManager = initFractionalScaleManager(
+  reg.bindInterface(
+    fracScale.name, wp_fractional_scale_manager_v1_interface.addr, fracScale.version
+  )
 )
 
 let seatIface = reg["wl_seat"]
@@ -106,6 +114,12 @@ let pool = get shmi.createPool(fd, poolsize)
 let buff = pool.createBuffer(0, 32, 32, 32 * 4, ShmFormat.ARGB8888)
 roundtrip disp
 
+let scale = fracManager.getFractionalScale(surf)
+scale.onPreferredScale = proc(scale: uint32) =
+  echo "got preferred output scale: " & $scale
+
+scale.attachCallbacks()
+
 let xsurf = get wm.getXDGSurface(surf)
 let toplevel = get xsurf.getToplevel()
 wm.attachCallbacks()
@@ -132,7 +146,7 @@ toplevel.attachCallbacks()
 
 let buffr = get buff
 buffr.onRelease = proc(_: Buffer) =
-  echo "Release Buffer"
+  discard # echo "Release Buffer"
 
 buffr.attachCallbacks()
 

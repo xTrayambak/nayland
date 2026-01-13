@@ -57,7 +57,6 @@ $ nimble add https://github.com/xTrayambak/nayland
 - [X] `xdg_toplevel`
 - [ ] `xdg_popup`
 
-## linux DMA-BUF
-- [ ] `zwp_linux_dmabuf_v1`
-- [ ] `zwp_linux_buffer_params_v1`
-- [ ] `zwp_linux_dmabuf_feedback_v1`
+## Fractional Scale V1
+- [X] `wp_fractional_scale_manager_v1`
+- [X] `wp_fractional_scale_v1`
